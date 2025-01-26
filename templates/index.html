@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disease Prediction System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css"
+          rel="stylesheet">
+    <style>
+        .multi-select {
+          max-width: 600px;
+          margin: 50px auto;
+        }
+        .form-label {
+          font-size: 18px;
+          font-weight: light;
+        }
+        .multi-select-container {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+          border: 1px solid #ced4da;
+          padding: 10px;
+          border-radius: 5px;
+        }
+        .multi-select-container span {
+          background-color: #f8d7da;
+          color: #721c24;
+          padding: 5px 10px;
+          border-radius: 3px;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .multi-select-container span i {
+          cursor: pointer;
+          font-size: 16px;
+          color: #721c24;
+        }
+        .result-container {
+          margin-top: 20px;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="container multi-select">
+    <h1 class="text-center">Disease Prediction System</h1>
+    <label for="symptoms" class="form-label">Enter the Symptoms you have</label>
+    <div class="multi-select-container" id="selected-symptoms">
+        <!-- Selected options will appear here -->
+    </div>
+    <select id="symptoms" class="form-select" aria-label="Select symptoms">
+        <option value="" disabled selected>Select a symptom</option>
+        {% for i in symptoms %}
+        <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+    </select>
+    <button id="predictBtn" class="btn btn-primary mt-3">Predict</button>
+    <div class="result-container" id="result">
+        <!-- Prediction result will appear here -->
+    </div>
+</div>
+
+<script>
+    const symptomsSelect = document.getElementById('symptoms');
+    const selectedContainer = document.getElementById('selected-symptoms');
+    const predictBtn = document.getElementById('predictBtn');
+    const resultContainer = document.getElementById('result');
+
+    const selectedSymptoms = new Set();
+
+    symptomsSelect.addEventListener('change', () => {
+      const selectedValue = symptomsSelect.value;
+
+      // Check if symptom is already selected
+      if (!selectedSymptoms.has(selectedValue)) {
+        selectedSymptoms.add(selectedValue);
+
+        // Create a tag for the selected symptom
+        const span = document.createElement('span');
+        span.innerHTML = `${selectedValue} <i class="bi bi-x-circle"></i>`;
+
+        // Add a click event to the cross (delete) button
+        span.querySelector('i').addEventListener('click', () => {
+          // Remove the symptom from the tag and the set
+          selectedSymptoms.delete(selectedValue);
+          span.remove();
+        });
+
+        selectedContainer.appendChild(span);
+      }
+
+      // Reset the dropdown selection
+      symptomsSelect.value = '';
+    });
+
+    predictBtn.addEventListener('click', () => {
+  const symptoms = Array.from(selectedSymptoms);
+
+  // Make AJAX request to Flask app
+  fetch('/predict', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ symptoms: symptoms })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const predictions = data.predictions;
+        resultContainer.innerHTML = `
+          <strong>Predicted Disease:</strong> ${predictions.disease} <br>
+          <strong>Description:</strong> ${predictions.description} <br>
+          <strong>Precautions:</strong> ${predictions.precautions}
+        `;
+      } else {
+        resultContainer.innerHTML = `<strong>Error:</strong> ${data.message}`;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      resultContainer.innerHTML = `<strong>Error:</strong> Unable to fetch predictions.`;
+    });
+});
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
